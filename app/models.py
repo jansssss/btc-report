@@ -35,7 +35,8 @@ class MarketSnapshot:
 class ScoredReport:
     total_score: int
     regime: str
-    probability_view: str
+    prob_150k: str
+    risk_120k: str
     signals: list[Signal]
     snapshot: MarketSnapshot
     key_facts: list[str]
@@ -45,7 +46,8 @@ class ScoredReport:
             "date": self.snapshot.as_of,
             "total_score": self.total_score,
             "regime": self.regime,
-            "probability_view": self.probability_view,
+            "prob_150k": self.prob_150k,
+            "risk_120k": self.risk_120k,
             "signals": [
                 {
                     "name": signal.name,
@@ -53,7 +55,6 @@ class ScoredReport:
                     "status": signal.status,
                     "value": signal.value,
                     "rationale": signal.rationale,
-                    "source": signal.source,
                 }
                 for signal in self.signals
             ],
