@@ -122,7 +122,7 @@ class DataCollector:
                 "series_id": series_id,
                 "api_key": self.settings.fred_api_key,
                 "file_type": "json",
-                "sort_order": "asc",
+                "sort_order": "desc",
                 "limit": limit * 3,
             },
         )
@@ -133,7 +133,7 @@ class DataCollector:
             if raw_value in (None, ".", ""):
                 continue
             points.append(FredObservation(date=row["date"], value=float(raw_value)))
-        return points[-limit:]
+        return list(reversed(points))[-limit:]
 
     def _cpi_yoy(self, series: list[FredObservation]) -> float | None:
         if len(series) < 13:
