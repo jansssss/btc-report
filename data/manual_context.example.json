@@ -1,0 +1,8 @@
+{
+  "fed_hawkish": false,
+  "geopolitical_risk_up": false,
+  "etf_net_flow_usd_millions": null,
+  "notes": [
+    "Optional manual overrides for ambiguous macro inputs."
+  ]
+}

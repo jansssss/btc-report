@@ -1,0 +1,48 @@
+name: Daily BTC Macro Report
+
+on:
+  schedule:
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare manual context
+        run: |
+          if [ ! -f data/manual_context.json ]; then
+            cp data/manual_context.example.json data/manual_context.json
+          fi
+
+      - name: Generate and send report
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
+          USE_LLM_SUMMARY: ${{ vars.USE_LLM_SUMMARY || 'false' }}
+          WEEKLY_BREAKOUT_THRESHOLD: ${{ vars.WEEKLY_BREAKOUT_THRESHOLD || '126000' }}
+          OIL_STABLE_THRESHOLD: ${{ vars.OIL_STABLE_THRESHOLD || '90' }}
+          OIL_RISK_THRESHOLD: ${{ vars.OIL_RISK_THRESHOLD || '100' }}
+          ETF_POSITIVE_THRESHOLD: ${{ vars.ETF_POSITIVE_THRESHOLD || '0' }}
+          ETF_NEGATIVE_THRESHOLD: ${{ vars.ETF_NEGATIVE_THRESHOLD || '0' }}
+          TEN_YEAR_CHANGE_THRESHOLD_BPS: ${{ vars.TEN_YEAR_CHANGE_THRESHOLD_BPS || '-5' }}
+          CPI_COOLING_THRESHOLD: ${{ vars.CPI_COOLING_THRESHOLD || '0' }}
+          SCORE_BULL_THRESHOLD: ${{ vars.SCORE_BULL_THRESHOLD || '3' }}
+          SCORE_RISK_THRESHOLD: ${{ vars.SCORE_RISK_THRESHOLD || '-3' }}
+        run: python -m app.main

@@ -1,0 +1,4 @@
+.env
+data/manual_context.json
+__pycache__/
+*.pyc
