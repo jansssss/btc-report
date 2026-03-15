@@ -43,6 +43,9 @@ class Settings:
     etf_negative_threshold: float
     ten_year_change_threshold_bps: float
     cpi_cooling_threshold: float
+    fear_greed_extreme_greed_threshold: int
+    fear_greed_extreme_fear_threshold: int
+    funding_rate_overheating_pct: float
     use_llm: bool
 
     @classmethod
@@ -74,6 +77,9 @@ class Settings:
             etf_negative_threshold=float(os.getenv("ETF_NEGATIVE_THRESHOLD", "0")),
             ten_year_change_threshold_bps=float(os.getenv("TEN_YEAR_CHANGE_THRESHOLD_BPS", "-5")),
             cpi_cooling_threshold=float(os.getenv("CPI_COOLING_THRESHOLD", "0")),
+            fear_greed_extreme_greed_threshold=int(os.getenv("FEAR_GREED_EXTREME_GREED_THRESHOLD", "80")),
+            fear_greed_extreme_fear_threshold=int(os.getenv("FEAR_GREED_EXTREME_FEAR_THRESHOLD", "20")),
+            funding_rate_overheating_pct=float(os.getenv("FUNDING_RATE_OVERHEATING_PCT", "0.05")),
             use_llm=os.getenv("USE_LLM_SUMMARY", "false").lower() == "true",
         )
 

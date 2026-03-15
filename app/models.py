@@ -22,10 +22,16 @@ class MarketSnapshot:
     etf_net_flow_usd_millions: float | None
     oil_price_usd: float | None
     oil_5d_avg_usd: float | None
+    oil_last_date: str | None
     us10y_yield_pct: float | None
     us10y_5d_change_bps: float | None
+    us10y_last_date: str | None
     cpi_yoy_pct: float | None
     cpi_prev_yoy_pct: float | None
+    cpi_last_date: str | None
+    fear_greed_value: int | None
+    fear_greed_label: str | None
+    funding_rate_pct: float | None
     fed_hawkish: bool | None
     geopolitical_risk_up: bool | None
     manual_notes: list[str] = field(default_factory=list)

@@ -90,6 +90,54 @@ def score_snapshot(snapshot: MarketSnapshot, settings: Settings) -> ScoredReport
                 )
             )
 
+    if snapshot.fear_greed_value is not None:
+        if snapshot.fear_greed_value >= settings.fear_greed_extreme_greed_threshold:
+            signals.append(
+                Signal(
+                    name="극탐욕 (익절 경계)",
+                    score=-1,
+                    status="warning",
+                    value=f"{snapshot.fear_greed_value} ({snapshot.fear_greed_label})",
+                    rationale=f"공포&탐욕 지수 {settings.fear_greed_extreme_greed_threshold} 이상 — 시장 과열, 익절 고려 구간.",
+                    source="Alternative.me FNG",
+                )
+            )
+        elif snapshot.fear_greed_value <= settings.fear_greed_extreme_fear_threshold:
+            signals.append(
+                Signal(
+                    name="극공포 (매수 기회)",
+                    score=1,
+                    status="positive",
+                    value=f"{snapshot.fear_greed_value} ({snapshot.fear_greed_label})",
+                    rationale=f"공포&탐욕 지수 {settings.fear_greed_extreme_fear_threshold} 이하 — 극공포 구간, 저점 매수 기회.",
+                    source="Alternative.me FNG",
+                )
+            )
+
+    if snapshot.funding_rate_pct is not None:
+        if snapshot.funding_rate_pct >= settings.funding_rate_overheating_pct * 2:
+            signals.append(
+                Signal(
+                    name="펀딩 급등 (롱 과열 심각)",
+                    score=-2,
+                    status="negative",
+                    value=f"{snapshot.funding_rate_pct:.4f}%",
+                    rationale=f"펀딩레이트 {settings.funding_rate_overheating_pct * 2:.2f}% 초과 — 롱 과열 심각, 청산 리스크 주의.",
+                    source="Binance BTCUSDT",
+                )
+            )
+        elif snapshot.funding_rate_pct >= settings.funding_rate_overheating_pct:
+            signals.append(
+                Signal(
+                    name="펀딩 과열 (익절 경계)",
+                    score=-1,
+                    status="warning",
+                    value=f"{snapshot.funding_rate_pct:.4f}%",
+                    rationale=f"펀딩레이트 {settings.funding_rate_overheating_pct:.2f}% 이상 — 롱 과열 신호.",
+                    source="Binance BTCUSDT",
+                )
+            )
+
     if snapshot.geopolitical_risk_up is True:
         signals.append(
             Signal(
@@ -147,9 +195,16 @@ def _build_key_facts(snapshot: MarketSnapshot) -> list[str]:
     if snapshot.etf_net_flow_usd_millions is not None:
         facts.append(f"현물 ETF 순자금: ${snapshot.etf_net_flow_usd_millions:.1f}M")
     if snapshot.oil_5d_avg_usd is not None:
-        facts.append(f"WTI 5일 평균: ${snapshot.oil_5d_avg_usd:.2f}")
+        date_tag = f" ({snapshot.oil_last_date})" if snapshot.oil_last_date else ""
+        facts.append(f"WTI 5일 평균: ${snapshot.oil_5d_avg_usd:.2f}{date_tag}")
     if snapshot.us10y_yield_pct is not None:
-        facts.append(f"미 10년물: {snapshot.us10y_yield_pct:.2f}%")
+        date_tag = f" ({snapshot.us10y_last_date})" if snapshot.us10y_last_date else ""
+        facts.append(f"미 10년물: {snapshot.us10y_yield_pct:.2f}%{date_tag}")
     if snapshot.cpi_yoy_pct is not None:
-        facts.append(f"CPI YoY: {snapshot.cpi_yoy_pct:.2f}%")
+        date_tag = f" ({snapshot.cpi_last_date})" if snapshot.cpi_last_date else ""
+        facts.append(f"CPI YoY: {snapshot.cpi_yoy_pct:.2f}%{date_tag}")
+    if snapshot.fear_greed_value is not None:
+        facts.append(f"공포&탐욕: {snapshot.fear_greed_value} ({snapshot.fear_greed_label})")
+    if snapshot.funding_rate_pct is not None:
+        facts.append(f"펀딩레이트: {snapshot.funding_rate_pct:.4f}%")
     return facts
