@@ -194,9 +194,12 @@ def _build_key_facts(snapshot: MarketSnapshot) -> list[str]:
         facts.append(f"BTC 현물: ${snapshot.btc_price_usd:,.0f}")
     if snapshot.etf_net_flow_usd_millions is not None:
         facts.append(f"현물 ETF 순자금: ${snapshot.etf_net_flow_usd_millions:.1f}M")
-    if snapshot.oil_5d_avg_usd is not None:
+    if snapshot.oil_price_usd is not None or snapshot.oil_5d_avg_usd is not None:
         date_tag = f" ({snapshot.oil_last_date})" if snapshot.oil_last_date else ""
-        facts.append(f"WTI 5일 평균: ${snapshot.oil_5d_avg_usd:.2f}{date_tag}")
+        spot = f"현물 ${snapshot.oil_price_usd:.2f}" if snapshot.oil_price_usd is not None else ""
+        avg = f"5일 평균 ${snapshot.oil_5d_avg_usd:.2f}" if snapshot.oil_5d_avg_usd is not None else ""
+        combined = " / ".join(filter(None, [spot, avg]))
+        facts.append(f"WTI: {combined}{date_tag}")
     if snapshot.us10y_yield_pct is not None:
         date_tag = f" ({snapshot.us10y_last_date})" if snapshot.us10y_last_date else ""
         facts.append(f"미 10년물: {snapshot.us10y_yield_pct:.2f}%{date_tag}")
