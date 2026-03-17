@@ -7,28 +7,34 @@ from .models import MarketSnapshot, ScoredReport, Signal
 def score_snapshot(snapshot: MarketSnapshot, settings: Settings) -> ScoredReport:
     signals: list[Signal] = []
 
-    if snapshot.oil_5d_avg_usd is not None and snapshot.oil_5d_avg_usd <= settings.oil_stable_threshold:
-        signals.append(
-            Signal(
-                name="유가 안정",
-                score=1,
-                status="positive",
-                value=f"5일 평균 ${snapshot.oil_5d_avg_usd:.2f}",
-                rationale=f"WTI 5일 평균이 ${settings.oil_stable_threshold:.0f} 이하 유지.",
-                source="FRED DCOILWTICO",
+    if snapshot.oil_price_usd is not None and snapshot.oil_5d_avg_usd is not None:
+        deviation_pct = (snapshot.oil_price_usd - snapshot.oil_5d_avg_usd) / snapshot.oil_5d_avg_usd * 100
+        if deviation_pct <= -10:
+            oil_score, oil_status, oil_name = 2, "positive", "유가 급락"
+            oil_rationale = f"WTI 현물이 5일 평균 대비 {deviation_pct:.1f}% 하락 — 강한 호재."
+        elif deviation_pct <= -3:
+            oil_score, oil_status, oil_name = 1, "positive", "유가 하락세"
+            oil_rationale = f"WTI 현물이 5일 평균 대비 {deviation_pct:.1f}% 하락."
+        elif deviation_pct < 3:
+            oil_score, oil_status, oil_name = 0, "neutral", "유가 중립"
+            oil_rationale = f"WTI 현물이 5일 평균 대비 {deviation_pct:.1f}% — 중립 구간."
+        elif deviation_pct < 10:
+            oil_score, oil_status, oil_name = -1, "warning", "유가 상승 경계"
+            oil_rationale = f"WTI 현물이 5일 평균 대비 {deviation_pct:.1f}% 상승 — 경계 구간."
+        else:
+            oil_score, oil_status, oil_name = -2, "negative", "유가 급등"
+            oil_rationale = f"WTI 현물이 5일 평균 대비 {deviation_pct:.1f}% 급등 — 강한 악재."
+        if oil_score != 0:
+            signals.append(
+                Signal(
+                    name=oil_name,
+                    score=oil_score,
+                    status=oil_status,
+                    value=f"현물 ${snapshot.oil_price_usd:.2f} / 5일 평균 ${snapshot.oil_5d_avg_usd:.2f}",
+                    rationale=oil_rationale,
+                    source="FRED DCOILWTICO",
+                )
             )
-        )
-    elif snapshot.oil_price_usd is not None and snapshot.oil_price_usd >= settings.oil_risk_threshold:
-        signals.append(
-            Signal(
-                name="유가 급등",
-                score=-2,
-                status="negative",
-                value=f"현물 ${snapshot.oil_price_usd:.2f}",
-                rationale=f"WTI가 ${settings.oil_risk_threshold:.0f} 돌파.",
-                source="FRED DCOILWTICO",
-            )
-        )
 
     if snapshot.etf_net_flow_usd_millions is not None and snapshot.etf_net_flow_usd_millions > settings.etf_positive_threshold:
         signals.append(
@@ -91,28 +97,76 @@ def score_snapshot(snapshot: MarketSnapshot, settings: Settings) -> ScoredReport
             )
 
     if snapshot.fear_greed_value is not None:
-        if snapshot.fear_greed_value >= settings.fear_greed_extreme_greed_threshold:
+        fng = snapshot.fear_greed_value
+        if fng >= settings.fear_greed_extreme_greed_threshold:
             signals.append(
                 Signal(
                     name="극탐욕 (익절 경계)",
                     score=-1,
                     status="warning",
-                    value=f"{snapshot.fear_greed_value} ({snapshot.fear_greed_label})",
-                    rationale=f"공포&탐욕 지수 {settings.fear_greed_extreme_greed_threshold} 이상 — 시장 과열, 익절 고려 구간.",
+                    value=f"{fng} ({snapshot.fear_greed_label})",
+                    rationale=f"공포&탐욕 지수 {fng} — {settings.fear_greed_extreme_greed_threshold} 이상 과열 구간.",
                     source="Alternative.me FNG",
                 )
             )
-        elif snapshot.fear_greed_value <= settings.fear_greed_extreme_fear_threshold:
+        elif fng <= settings.fear_greed_extreme_fear_threshold:
             signals.append(
                 Signal(
                     name="극공포 (매수 기회)",
                     score=1,
                     status="positive",
-                    value=f"{snapshot.fear_greed_value} ({snapshot.fear_greed_label})",
-                    rationale=f"공포&탐욕 지수 {settings.fear_greed_extreme_fear_threshold} 이하 — 극공포 구간, 저점 매수 기회.",
+                    value=f"{fng} ({snapshot.fear_greed_label})",
+                    rationale=f"공포&탐욕 지수 {fng} — {settings.fear_greed_extreme_fear_threshold} 이하 극공포 구간.",
                     source="Alternative.me FNG",
                 )
             )
+
+        if snapshot.fear_greed_prev_value is not None:
+            fng_change = fng - snapshot.fear_greed_prev_value
+            if fng_change >= 10:
+                signals.append(
+                    Signal(
+                        name="심리 급개선",
+                        score=1,
+                        status="positive",
+                        value=f"{snapshot.fear_greed_prev_value} → {fng} ({fng_change:+d})",
+                        rationale=f"공포&탐욕 지수 전일 대비 {fng_change:+d}pt 급등 — 심리 빠르게 개선.",
+                        source="Alternative.me FNG",
+                    )
+                )
+            elif fng_change >= 5:
+                signals.append(
+                    Signal(
+                        name="심리 개선",
+                        score=1,
+                        status="positive",
+                        value=f"{snapshot.fear_greed_prev_value} → {fng} ({fng_change:+d})",
+                        rationale=f"공포&탐욕 지수 전일 대비 {fng_change:+d}pt 상승.",
+                        source="Alternative.me FNG",
+                    )
+                )
+            elif fng_change <= -10:
+                signals.append(
+                    Signal(
+                        name="심리 급악화",
+                        score=-1,
+                        status="negative",
+                        value=f"{snapshot.fear_greed_prev_value} → {fng} ({fng_change:+d})",
+                        rationale=f"공포&탐욕 지수 전일 대비 {fng_change:+d}pt 급락 — 심리 빠르게 악화.",
+                        source="Alternative.me FNG",
+                    )
+                )
+            elif fng_change <= -5:
+                signals.append(
+                    Signal(
+                        name="심리 악화",
+                        score=-1,
+                        status="negative",
+                        value=f"{snapshot.fear_greed_prev_value} → {fng} ({fng_change:+d})",
+                        rationale=f"공포&탐욕 지수 전일 대비 {fng_change:+d}pt 하락.",
+                        source="Alternative.me FNG",
+                    )
+                )
 
     if snapshot.funding_rate_pct is not None:
         if snapshot.funding_rate_pct >= settings.funding_rate_overheating_pct * 2:
@@ -207,7 +261,11 @@ def _build_key_facts(snapshot: MarketSnapshot) -> list[str]:
         date_tag = f" ({snapshot.cpi_last_date})" if snapshot.cpi_last_date else ""
         facts.append(f"CPI YoY: {snapshot.cpi_yoy_pct:.2f}%{date_tag}")
     if snapshot.fear_greed_value is not None:
-        facts.append(f"공포&탐욕: {snapshot.fear_greed_value} ({snapshot.fear_greed_label})")
+        fng_str = f"공포&탐욕: {snapshot.fear_greed_value} ({snapshot.fear_greed_label})"
+        if snapshot.fear_greed_prev_value is not None:
+            change = snapshot.fear_greed_value - snapshot.fear_greed_prev_value
+            fng_str += f", 전일 대비 {change:+d}pt"
+        facts.append(fng_str)
     if snapshot.funding_rate_pct is not None:
         facts.append(f"펀딩레이트: {snapshot.funding_rate_pct:.4f}%")
     return facts

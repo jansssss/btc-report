@@ -72,6 +72,7 @@ class DataCollector:
             cpi_last_date=cpi_last_date,
             fear_greed_value=fear_greed_result[0] if fear_greed_result else None,
             fear_greed_label=fear_greed_result[1] if fear_greed_result else None,
+            fear_greed_prev_value=fear_greed_result[2] if fear_greed_result else None,
             funding_rate_pct=funding_rate,
             fed_hawkish=self._manual_bool("fed_hawkish"),
             geopolitical_risk_up=self._manual_bool("geopolitical_risk_up"),
@@ -125,14 +126,18 @@ class DataCollector:
         value = self.manual_context.get(key)
         return float(value) if value is not None else None
 
-    def _get_fear_greed(self) -> tuple[int, str]:
-        data = get_json(ALTERNATIVE_ME_FNG_URL, params={"limit": 1})
-        entry = data.get("data", [{}])[0]
-        value = entry.get("value")
-        label = entry.get("value_classification", "")
+    def _get_fear_greed(self) -> tuple[int, str, int | None]:
+        data = get_json(ALTERNATIVE_ME_FNG_URL, params={"limit": 2})
+        entries = data.get("data", [])
+        if not entries:
+            raise ValueError("No data in Fear & Greed response")
+        today = entries[0]
+        value = today.get("value")
+        label = today.get("value_classification", "")
         if value is None:
             raise ValueError("No value in Fear & Greed response")
-        return int(value), label
+        prev_value = int(entries[1].get("value")) if len(entries) >= 2 else None
+        return int(value), label, prev_value
 
     def _get_funding_rate(self) -> float:
         data = get_json(BINANCE_PREMIUM_INDEX_URL, params={"symbol": "BTCUSDT"})

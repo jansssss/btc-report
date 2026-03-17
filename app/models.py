@@ -30,6 +30,7 @@ class MarketSnapshot:
     cpi_prev_yoy_pct: float | None
     cpi_last_date: str | None
     fear_greed_value: int | None
+    fear_greed_prev_value: int | None
     fear_greed_label: str | None
     funding_rate_pct: float | None
     fed_hawkish: bool | None
@@ -64,6 +65,20 @@ class ScoredReport:
                 }
                 for signal in self.signals
             ],
+            "raw_market": {
+                "btc_price_usd": self.snapshot.btc_price_usd,
+                "wti_spot_usd": self.snapshot.oil_price_usd,
+                "wti_5d_avg_usd": self.snapshot.oil_5d_avg_usd,
+                "us10y_yield_pct": self.snapshot.us10y_yield_pct,
+                "us10y_5d_change_bps": self.snapshot.us10y_5d_change_bps,
+                "cpi_yoy_pct": self.snapshot.cpi_yoy_pct,
+                "cpi_prev_yoy_pct": self.snapshot.cpi_prev_yoy_pct,
+                "fear_greed_value": self.snapshot.fear_greed_value,
+                "fear_greed_prev_value": self.snapshot.fear_greed_prev_value,
+                "fear_greed_label": self.snapshot.fear_greed_label,
+                "funding_rate_pct": self.snapshot.funding_rate_pct,
+                "etf_net_flow_usd_millions": self.snapshot.etf_net_flow_usd_millions,
+            },
             "key_facts": self.key_facts,
             "manual_notes": self.snapshot.manual_notes,
         }
