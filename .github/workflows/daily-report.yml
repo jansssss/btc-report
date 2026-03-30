@@ -34,8 +34,7 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5-mini' }}
-          USE_LLM_SUMMARY: ${{ vars.USE_LLM_SUMMARY || 'false' }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-5.4-mani' }}
           WEEKLY_BREAKOUT_THRESHOLD: ${{ vars.WEEKLY_BREAKOUT_THRESHOLD || '126000' }}
           OIL_STABLE_THRESHOLD: ${{ vars.OIL_STABLE_THRESHOLD || '90' }}
           OIL_RISK_THRESHOLD: ${{ vars.OIL_RISK_THRESHOLD || '100' }}

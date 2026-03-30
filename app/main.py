@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import replace
 
 from .config import Settings
 from .data_sources import DataCollector
-from .llm import maybe_generate_summary
+from .llm import maybe_generate_judgment
 from .reporting import build_plaintext_report, build_slack_blocks
 from .scoring import score_snapshot
 from .slack import send_message
@@ -17,12 +18,18 @@ def run(*, dry_run: bool) -> int:
     snapshot = collector.build_snapshot()
     report = score_snapshot(snapshot, settings)
 
-    narrative = maybe_generate_summary(
+    judgment = maybe_generate_judgment(
         report,
         api_key=settings.openai_api_key,
         model=settings.openai_model,
-        enabled=settings.use_llm,
-    ) or build_plaintext_report(report)
+    )
+
+    if judgment is not None:
+        # LLM이 직접 판단한 값으로 기계식 점수 판정을 덮어씀
+        report = replace(report, regime=judgment.regime, prob_150k=judgment.prob_150k, risk_120k=judgment.risk_120k)
+        narrative = judgment.narrative
+    else:
+        narrative = build_plaintext_report(report)
 
     output = {
         "report": report.to_prompt_payload(),

@@ -39,6 +39,14 @@ class MarketSnapshot:
 
 
 @dataclass(frozen=True)
+class LLMJudgment:
+    regime: str
+    prob_150k: str
+    risk_120k: str
+    narrative: str
+
+
+@dataclass(frozen=True)
 class ScoredReport:
     total_score: int
     regime: str
