@@ -58,26 +58,6 @@ Only needed if you want the LLM-written narrative:
 
 ## Repository secrets and variables
 
-Set these GitHub Secrets:
-
-- `SLACK_BOT_TOKEN`
-- `SLACK_CHANNEL_ID`
-- `FRED_API_KEY`
-- `OPENAI_API_KEY` (optional)
-
-Set these GitHub Variables if you want to tune thresholds without code changes:
-
-- `OPENAI_MODEL`
-- `USE_LLM_SUMMARY`
-- `WEEKLY_BREAKOUT_THRESHOLD`
-- `OIL_STABLE_THRESHOLD`
-- `OIL_RISK_THRESHOLD`
-- `ETF_POSITIVE_THRESHOLD`
-- `ETF_NEGATIVE_THRESHOLD`
-- `TEN_YEAR_CHANGE_THRESHOLD_BPS`
-- `CPI_COOLING_THRESHOLD`
-- `SCORE_BULL_THRESHOLD`
-- `SCORE_RISK_THRESHOLD`
 
 ## Schedule
 
