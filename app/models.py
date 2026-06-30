@@ -35,6 +35,10 @@ class MarketSnapshot:
     funding_rate_pct: float | None
     fed_hawkish: bool | None
     geopolitical_risk_up: bool | None
+    semicon_export_usd_100m: float | None
+    semicon_export_prev_usd_100m: float | None
+    semicon_export_month: str | None
+    semicon_export_prev_month: str | None
     manual_notes: list[str] = field(default_factory=list)
 
 
@@ -86,6 +90,10 @@ class ScoredReport:
                 "fear_greed_label": self.snapshot.fear_greed_label,
                 "funding_rate_pct": self.snapshot.funding_rate_pct,
                 "etf_net_flow_usd_millions": self.snapshot.etf_net_flow_usd_millions,
+                "semicon_export_usd_100m": self.snapshot.semicon_export_usd_100m,
+                "semicon_export_prev_usd_100m": self.snapshot.semicon_export_prev_usd_100m,
+                "semicon_export_month": self.snapshot.semicon_export_month,
+                "semicon_export_prev_month": self.snapshot.semicon_export_prev_month,
             },
             "key_facts": self.key_facts,
             "manual_notes": self.snapshot.manual_notes,

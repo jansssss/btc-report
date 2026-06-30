@@ -28,6 +28,7 @@ def _read_json(path: Path | None) -> dict[str, Any]:
 @dataclass(frozen=True)
 class Settings:
     fred_api_key: str | None
+    kics_api_key: str | None
     slack_bot_token: str | None
     slack_channel_id: str | None
     openai_api_key: str | None
@@ -61,6 +62,7 @@ class Settings:
 
         return cls(
             fred_api_key=os.getenv("FRED_API_KEY"),
+            kics_api_key=os.getenv("KICS_API_KEY"),
             slack_bot_token=os.getenv("SLACK_BOT_TOKEN"),
             slack_channel_id=os.getenv("SLACK_CHANNEL_ID"),
             openai_api_key=os.getenv("OPENAI_API_KEY"),

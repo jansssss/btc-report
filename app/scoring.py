@@ -32,7 +32,7 @@ def score_snapshot(snapshot: MarketSnapshot, settings: Settings) -> ScoredReport
                     status=oil_status,
                     value=f"현물 ${snapshot.oil_price_usd:.2f} / 5일 평균 ${snapshot.oil_5d_avg_usd:.2f}",
                     rationale=oil_rationale,
-                    source="FRED DCOILWTICO",
+                    source="Naver Finance OIL_CL",
                 )
             )
 
@@ -67,7 +67,7 @@ def score_snapshot(snapshot: MarketSnapshot, settings: Settings) -> ScoredReport
                 status="positive",
                 value=f"{snapshot.us10y_5d_change_bps:.1f} bps / 5일",
                 rationale="5거래일 기준 장기금리 완화.",
-                source="FRED DGS10",
+                source="Treasury.gov DGS10",
             )
         )
 
@@ -268,4 +268,15 @@ def _build_key_facts(snapshot: MarketSnapshot) -> list[str]:
         facts.append(fng_str)
     if snapshot.funding_rate_pct is not None:
         facts.append(f"펀딩레이트: {snapshot.funding_rate_pct:.4f}%")
+    if snapshot.semicon_export_usd_100m is not None and snapshot.semicon_export_prev_usd_100m is not None:
+        curr = snapshot.semicon_export_usd_100m
+        prev = snapshot.semicon_export_prev_usd_100m
+        curr_label = f"{snapshot.semicon_export_month[4:6]}월" if snapshot.semicon_export_month else "이달"
+        prev_label = f"{snapshot.semicon_export_prev_month[4:6]}월" if snapshot.semicon_export_prev_month else "전달"
+        diff = curr - prev
+        pct = diff / prev * 100
+        sign = "+" if diff >= 0 else ""
+        facts.append(
+            f"반도체 수출: {prev_label} ${prev:.0f}억 → {curr_label} ${curr:.0f}억 ({sign}{diff:.0f}억, {sign}{pct:.1f}%)"
+        )
     return facts

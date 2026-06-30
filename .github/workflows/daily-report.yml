@@ -31,6 +31,7 @@ jobs:
       - name: Generate and send report
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          KICS_API_KEY: ${{ secrets.KICS_API_KEY }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

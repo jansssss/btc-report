@@ -15,6 +15,12 @@ def get_json(url: str, *, params: dict[str, Any] | None = None, headers: dict[st
     return response.json()
 
 
+def get_text(url: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> str:
+    response = requests.get(url, params=params, headers=headers, timeout=DEFAULT_TIMEOUT)
+    response.raise_for_status()
+    return response.text
+
+
 def post_json(
     url: str,
     *,
