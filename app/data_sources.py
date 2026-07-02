@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from io import StringIO
 from statistics import mean
 from typing import Any
+from xml.etree import ElementTree
 
 from .config import Settings
 from .http import get_json, get_text
@@ -21,7 +22,7 @@ ALTERNATIVE_ME_FNG_URL = "https://api.alternative.me/fng/"
 BINANCE_PREMIUM_INDEX_URL = "https://fapi.binance.com/fapi/v1/premiumIndex"
 NAVER_WORLD_DAILY_URL = "https://finance.naver.com/marketindex/worldDailyQuote.naver"
 TREASURY_YIELD_CURVE_BASE = "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{year}/all"
-KICS_TRADE_STATS_URL = "https://apis.data.go.kr/1220000/tradeStats/getTradeStatsList"
+KICS_ITEM_TRADE_URL = "https://apis.data.go.kr/1220000/Itemtrade/getItemtradeList"
 _SEMICON_HS4 = "8542"  # 집적회로 (반도체)
 
 _NAVER_HEADERS = {
@@ -190,43 +191,41 @@ class DataCollector:
 
     def _get_semiconductor_exports(self) -> tuple[float, str, float, str] | None:
         """
-        Returns (curr_100m, curr_yyyymm, prev_100m, prev_yyyymm) from 관세청 API.
+        Returns (curr_100m, curr_yyyymm, prev_100m, prev_yyyymm) from 관세청 품목별 수출입실적 API.
         Unit: 억달러 (100M USD). Requires KICS_API_KEY.
         """
         if not self.settings.kics_api_key:
             return None
 
         now = datetime.now(timezone.utc)
-        # Build last 3 months to find 2 consecutive ones with published data
-        months: list[str] = []
-        y, m = now.year, now.month
-        for _ in range(3):
-            months.append(f"{y}{m:02d}")
-            m -= 1
-            if m == 0:
-                m, y = 12, y - 1
+        end_yyyymm = f"{now.year}{now.month:02d}"
+        start_y, start_m = now.year, now.month - 3
+        if start_m <= 0:
+            start_m += 12
+            start_y -= 1
+        start_yyyymm = f"{start_y}{start_m:02d}"
+
+        text = get_text(
+            KICS_ITEM_TRADE_URL,
+            params={
+                "serviceKey": self.settings.kics_api_key,
+                "strtYymm": start_yyyymm,
+                "endYymm": end_yyyymm,
+                "hsSgn": _SEMICON_HS4,
+            },
+        )
+        root = ElementTree.fromstring(text)
+        result_code = root.findtext("header/resultCode")
+        if result_code not in (None, "00", "0"):
+            raise ValueError(f"KICS API error {result_code}: {root.findtext('header/resultMsg')}")
 
         results: dict[str, float] = {}
-        for yyyymm in months:
-            payload = get_json(
-                KICS_TRADE_STATS_URL,
-                params={
-                    "serviceKey": self.settings.kics_api_key,
-                    "yyyyMm": yyyymm,
-                    "hsSgn": "4",
-                    "itemCd": _SEMICON_HS4,
-                    "type": "json",
-                },
-            )
-            items = payload.get("response", {}).get("body", {}).get("items", {}).get("item", [])
-            if isinstance(items, dict):
-                items = [items]
-            for item in items:
-                raw = item.get("expDlr")
-                if raw not in (None, "", "0", 0):
-                    # API unit: 천달러 → 억달러
-                    results[yyyymm] = round(float(raw) / 100_000, 1)
-                    break
+        for item in root.findall("body/items/item"):
+            yyyymm = item.findtext("year")
+            raw = item.findtext("expDlr")
+            if yyyymm and raw not in (None, "", "0"):
+                # API unit: USD → 억달러 (100M USD)
+                results[yyyymm] = round(float(raw) / 100_000_000, 1)
 
         available = sorted(results, reverse=True)
         if len(available) < 2:
