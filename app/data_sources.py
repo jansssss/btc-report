@@ -221,23 +221,28 @@ class DataCollector:
         if result_code not in (None, "00", "0"):
             raise ValueError(f"KICS API error {result_code}: {root.findtext('header/resultMsg')}")
 
+        all_items = root.findall("body/items/item")
         results: dict[str, float] = {}
-        for item in root.findall("body/items/item"):
+        for item in all_items:
             period = item.findtext("year")
             raw = item.findtext("expDlr")
-            hs_code = item.findtext("hsCode")
-            # API also returns a "총계" (grand total) row alongside monthly rows, and can mix in
-            # finer-grained sub-codes (6/10-digit) under the requested HS4 code; keep only rows
-            # that are a real YYYY.MM period for the exact requested HS4 code.
+            # API also returns a "총계" (grand total) row alongside monthly rows; skip anything
+            # that isn't a real YYYY.MM period.
             match = _KICS_PERIOD_RE.match(period) if period else None
-            if match and hs_code == _SEMICON_HS4 and raw not in (None, "", "0"):
+            if match and raw not in (None, "", "0"):
                 yyyymm = f"{match.group(1)}{int(match.group(2)):02d}"
                 # API unit: USD → 억달러 (100M USD)
                 results[yyyymm] = round(float(raw) / 100_000_000, 1)
 
         available = sorted(results, reverse=True)
         if len(available) < 2:
-            return None
+            raw_dump = [
+                (item.findtext("year"), item.findtext("hsCode"), item.findtext("expDlr"))
+                for item in all_items
+            ]
+            raise ValueError(
+                f"Only {len(available)} usable monthly rows (need 2). Raw (year, hsCode, expDlr): {raw_dump}"
+            )
         curr, prev = available[0], available[1]
         return results[curr], curr, results[prev], prev
 
