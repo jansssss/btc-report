@@ -25,6 +25,8 @@ TREASURY_YIELD_CURVE_BASE = "https://home.treasury.gov/resource-center/data-char
 KICS_ITEM_TRADE_URL = "https://apis.data.go.kr/1220000/Itemtrade/getItemtradeList"
 _SEMICON_HS4 = "8542"  # 집적회로 (반도체)
 
+_KICS_PERIOD_RE = re.compile(r"^(\d{4})\.(\d{1,2})$")
+
 _NAVER_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://finance.naver.com/",
@@ -199,7 +201,7 @@ class DataCollector:
 
         now = datetime.now(timezone.utc)
         end_yyyymm = f"{now.year}{now.month:02d}"
-        start_y, start_m = now.year, now.month - 3
+        start_y, start_m = now.year, now.month - 6
         if start_m <= 0:
             start_m += 12
             start_y -= 1
@@ -221,9 +223,15 @@ class DataCollector:
 
         results: dict[str, float] = {}
         for item in root.findall("body/items/item"):
-            yyyymm = item.findtext("year")
+            period = item.findtext("year")
             raw = item.findtext("expDlr")
-            if yyyymm and raw not in (None, "", "0"):
+            hs_code = item.findtext("hsCode")
+            # API also returns a "총계" (grand total) row alongside monthly rows, and can mix in
+            # finer-grained sub-codes (6/10-digit) under the requested HS4 code; keep only rows
+            # that are a real YYYY.MM period for the exact requested HS4 code.
+            match = _KICS_PERIOD_RE.match(period) if period else None
+            if match and hs_code == _SEMICON_HS4 and raw not in (None, "", "0"):
+                yyyymm = f"{match.group(1)}{int(match.group(2)):02d}"
                 # API unit: USD → 억달러 (100M USD)
                 results[yyyymm] = round(float(raw) / 100_000_000, 1)
 
