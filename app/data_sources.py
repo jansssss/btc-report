@@ -234,6 +234,18 @@ class DataCollector:
                 # API unit: USD → 억달러 (100M USD)
                 results[yyyymm] = round(float(raw) / 100_000_000, 1)
 
+        # TEMP DIAGNOSTIC: always dump raw rows so we can inspect the real response shape.
+        raw_dump = [
+            (
+                item.findtext("year"),
+                item.findtext("hsCode"),
+                item.findtext("expDlr"),
+                item.findtext("statKor"),
+            )
+            for item in all_items
+        ]
+        raise ValueError(f"DEBUG raw items (year, hsCode, expDlr, statKor): {raw_dump}")
+
         available = sorted(results, reverse=True)
         if len(available) < 2:
             raw_dump = [
