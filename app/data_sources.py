@@ -222,39 +222,25 @@ class DataCollector:
             raise ValueError(f"KICS API error {result_code}: {root.findtext('header/resultMsg')}")
 
         all_items = root.findall("body/items/item")
-        results: dict[str, float] = {}
+        # The API returns one row per 10-digit sub-code under the requested HS4 (e.g. DRAM,
+        # NAND, hybrid ICs, ...) rather than a single aggregate row, plus a "총계" row summing
+        # every sub-code across the whole queried range. So the per-month total has to be summed
+        # across all sub-code rows for that period; skip anything that isn't a real YYYY.MM period.
+        raw_totals: dict[str, float] = {}
         for item in all_items:
             period = item.findtext("year")
             raw = item.findtext("expDlr")
-            # API also returns a "총계" (grand total) row alongside monthly rows; skip anything
-            # that isn't a real YYYY.MM period.
             match = _KICS_PERIOD_RE.match(period) if period else None
             if match and raw not in (None, "", "0"):
                 yyyymm = f"{match.group(1)}{int(match.group(2)):02d}"
-                # API unit: USD → 억달러 (100M USD)
-                results[yyyymm] = round(float(raw) / 100_000_000, 1)
+                raw_totals[yyyymm] = raw_totals.get(yyyymm, 0.0) + float(raw)
 
-        # TEMP DIAGNOSTIC: always dump raw rows so we can inspect the real response shape.
-        raw_dump = [
-            (
-                item.findtext("year"),
-                item.findtext("hsCode"),
-                item.findtext("expDlr"),
-                item.findtext("statKor"),
-            )
-            for item in all_items
-        ]
-        raise ValueError(f"DEBUG raw items (year, hsCode, expDlr, statKor): {raw_dump}")
+        # API unit: USD → 억달러 (100M USD)
+        results = {yyyymm: round(total / 100_000_000, 1) for yyyymm, total in raw_totals.items()}
 
         available = sorted(results, reverse=True)
         if len(available) < 2:
-            raw_dump = [
-                (item.findtext("year"), item.findtext("hsCode"), item.findtext("expDlr"))
-                for item in all_items
-            ]
-            raise ValueError(
-                f"Only {len(available)} usable monthly rows (need 2). Raw (year, hsCode, expDlr): {raw_dump}"
-            )
+            return None
         curr, prev = available[0], available[1]
         return results[curr], curr, results[prev], prev
 
